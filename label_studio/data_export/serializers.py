@@ -184,6 +184,8 @@ class ExportParamSerializer(serializers.Serializer):
     remove_data = serializers.BooleanField(default=False,
                                            help_text='Remove data in response',
                                            required=False)
+    from_creation_date = serializers.DateTimeField(required=False, default=None)
+    to_creation_date = serializers.DateTimeField(required=False, default=None)
 
 
 class BaseExportDataSerializerForInteractive(InteractiveMixin, BaseExportDataSerializer):
