@@ -58,6 +58,10 @@ class BaseExportDataSerializer(FlexFieldsModelSerializer):
             remove_data = self.context.get('remove_data', False)
             if remove_data:
                 task.data = None
+        if 'remove_meta' in self.context:
+            remove_meta = self.context.get('remove_meta', False)
+            if remove_meta:
+                task.meta = None
 
         return super().to_representation(task)
 
@@ -183,6 +187,9 @@ class ExportParamSerializer(serializers.Serializer):
                                                   required=False)
     remove_data = serializers.BooleanField(default=False,
                                            help_text='Remove data in response',
+                                           required=False)
+    remove_meta = serializers.BooleanField(default=False,
+                                           help_text='Remove meta in response',
                                            required=False)
     from_creation_date = serializers.DateTimeField(required=False, default=None)
     to_creation_date = serializers.DateTimeField(required=False, default=None)

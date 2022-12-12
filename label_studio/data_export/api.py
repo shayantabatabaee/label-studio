@@ -99,6 +99,14 @@ class ExportFormatsListAPI(generics.RetrieveAPIView):
                           """,
             ),
             openapi.Parameter(
+                name='remove_meta',
+                type=openapi.TYPE_BOOLEAN,
+                in_=openapi.IN_QUERY,
+                description="""
+                          If true, meta tag will remove from response. 
+                          """,
+                        ),
+            openapi.Parameter(
                 name='ids',
                 type=openapi.TYPE_ARRAY,
                 items=openapi.Schema(title='Task ID', description='Individual task ID', type=openapi.TYPE_INTEGER),
@@ -188,6 +196,7 @@ class ExportAPI(generics.RetrieveAPIView):
         download_resources = query_serializer.validated_data['download_resources']
         interpolate_key_frames = query_serializer.validated_data['interpolate_key_frames']
         remove_data = query_serializer.validated_data['remove_data']
+        remove_meta = query_serializer.validated_data['remove_meta']
         from_creation_date = query_serializer.validated_data['from_creation_date']
         to_creation_date = query_serializer.validated_data['to_creation_date']
 
@@ -215,6 +224,8 @@ class ExportAPI(generics.RetrieveAPIView):
             query = query.filter(annotations__isnull=False).distinct()
         if remove_data:
             query = query.defer('data')
+        if remove_meta:
+            query = query.defer('meta')
         if from_creation_date is not None:
             query = query.filter(created_at__gt=from_creation_date)
         if to_creation_date is not None:
@@ -227,7 +238,7 @@ class ExportAPI(generics.RetrieveAPIView):
         for _task_ids in batch(task_ids, 1000):
             tasks += ExportDataSerializer(
                 self.get_task_queryset(query.filter(id__in=_task_ids)), many=True, expand=['drafts'],
-                context={'interpolate_key_frames': interpolate_key_frames, 'remove_data': remove_data}
+                context={'interpolate_key_frames': interpolate_key_frames, 'remove_data': remove_data, 'remove_meta': remove_meta}
             ).data
         logger.debug('Prepare export files')
 
