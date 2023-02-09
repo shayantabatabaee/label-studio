@@ -231,7 +231,7 @@ class ExportStorage(Storage):
     can_delete_objects = models.BooleanField(_('can_delete_objects'), null=True, blank=True, help_text='Deletion from storage enabled')
 
     def _get_serialized_data(self, annotation):
-        if get_bool_env('FUTURE_SAVE_TASK_TO_STORAGE', default=False):
+        if settings.FUTURE_SAVE_TASK_TO_STORAGE:
             # export task with annotations
             return ExportDataSerializer(annotation.task).data
         else:
@@ -312,8 +312,8 @@ class ExportStorageLink(models.Model):
 
     @staticmethod
     def get_key(annotation):
-        if get_bool_env('FUTURE_SAVE_TASK_TO_STORAGE', default=False):
-            return str(annotation.task.id)
+        if settings.FUTURE_SAVE_TASK_TO_STORAGE:
+            return str(annotation.task.id) + '.json'
         return str(annotation.id)
 
     @property
