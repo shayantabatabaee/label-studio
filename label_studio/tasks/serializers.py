@@ -50,8 +50,8 @@ class CompletedByDMSerializer(UserSerializer):
 
 
 class AnnotationSerializer(FlexFieldsModelSerializer):
-    """
-    """
+    """ """
+
     created_username = serializers.SerializerMethodField(default='', read_only=True, help_text='Username string')
     created_ago = serializers.CharField(default='', read_only=True, help_text='Time delta from creation time')
     completed_by = serializers.PrimaryKeyRelatedField(required=False, queryset=User.objects.all())
@@ -87,11 +87,11 @@ class AnnotationSerializer(FlexFieldsModelSerializer):
     def get_created_username(self, annotation):
         user = annotation.completed_by
         if not user:
-            return ""
+            return ''
 
         name = user.first_name
         if len(user.last_name):
-            name = name + " " + user.last_name
+            name = name + ' ' + user.last_name
 
         name += f' {user.email}, {user.id}'
         return name
@@ -103,7 +103,6 @@ class AnnotationSerializer(FlexFieldsModelSerializer):
 
 
 class TaskSimpleSerializer(ModelSerializer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['annotations'] = AnnotationSerializer(many=True, default=[], context=self.context, read_only=True)
@@ -124,11 +123,10 @@ class TaskSimpleSerializer(ModelSerializer):
 
 
 class BaseTaskSerializer(FlexFieldsModelSerializer):
-    """ Task Serializer with project scheme configs validation
-    """
+    """Task Serializer with project scheme configs validation"""
+
     def project(self, task=None):
-        """ Take the project from context
-        """
+        """Take the project from context"""
         if 'project' in self.context:
             project = self.context['project']
         elif 'view' in self.context and 'project_id' in self.context['view'].kwargs:
@@ -164,8 +162,8 @@ class BaseTaskSerializer(FlexFieldsModelSerializer):
 
 
 class BaseTaskSerializerBulk(serializers.ListSerializer):
-    """ Serialize task with annotation from source json data
-    """
+    """Serialize task with annotation from source json data"""
+
     annotations = AnnotationSerializer(many=True, default=[], read_only=True)
     predictions = PredictionSerializer(many=True, default=[], read_only=True)
 
@@ -176,7 +174,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
     @staticmethod
     def format_error(i, detail, item):
         if len(detail) == 1:
-            code = f' {detail[0].code}' if detail[0].code != "invalid" else ''
+            code = f' {detail[0].code}' if detail[0].code != 'invalid' else ''
             return f'Error{code} at item {i}: {detail[0]} :: {item}'
         else:
             errors = ', '.join(detail)
@@ -184,8 +182,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
             return f'Errors {codes} at item {i}: {errors} :: {item}'
 
     def to_internal_value(self, data):
-        """ Body of run_validation for all data items
-        """
+        """Body of run_validation for all data items"""
         if data is None:
             raise ValidationError('All tasks are empty (None)')
 
@@ -226,8 +223,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
 
     @staticmethod
     def _insert_valid_completed_by(annotations, members_email_to_id, members_ids, default_user):
-        """ Insert the correct id for completed_by by email in annotations
-        """
+        """Insert the correct id for completed_by by email in annotations"""
         for annotation in annotations:
             completed_by = annotation.get('completed_by')
             # no completed_by info found - just skip it, will be assigned to the user who imports
@@ -258,12 +254,13 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
             # in any other cases - import validation error
             else:
                 raise ValidationError(
-                    f"Import data contains completed_by={completed_by} which is not a valid annotator's email or ID")
+                    f"Import data contains completed_by={completed_by} which is not a valid annotator's email or ID"
+                )
             annotation.pop('completed_by', None)
 
     @staticmethod
     def _insert_valid_user_reviews(dicts, members_email_to_id, default_user):
-        """ Insert correct user id by email from snapshot
+        """Insert correct user id by email from snapshot
 
         :param dicts: draft or review dicts from snapshot
         :param members_email_to_id: mapping from emails to current LS instance user IDs
@@ -287,7 +284,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
 
     @staticmethod
     def _insert_valid_user_drafts(dicts, members_email_to_id, default_user):
-        """ Insert correct user id by email from snapshot
+        """Insert correct user id by email from snapshot
 
         :param dicts: draft or review dicts from snapshot
         :param members_email_to_id: mapping from emails to current LS instance user IDs
@@ -310,8 +307,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
 
     @retry_database_locked()
     def create(self, validated_data):
-        """ Create Tasks, Annotations, etc in bulk
-        """
+        """Create Tasks, Annotations, etc in bulk"""
         validated_tasks = validated_data
         logging.info(f'Try to serialize tasks with annotations, data len = {len(validated_data)}')
         user = self.context.get('user', None)
@@ -319,11 +315,14 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
         ff_user = self.project.organization.created_by
 
         # get members from project, we need them to restore annotation.completed_by etc
-        organization = user.active_organization \
-            if not self.project.created_by.active_organization else self.project.created_by.active_organization
+        organization = (
+            user.active_organization
+            if not self.project.created_by.active_organization
+            else self.project.created_by.active_organization
+        )
         members_email_to_id = dict(organization.members.values_list('user__email', 'user__id'))
         members_ids = set(members_email_to_id.values())
-        logger.debug(f"{len(members_email_to_id)} members found in organization {organization}")
+        logger.debug(f'{len(members_email_to_id)} members found in organization {organization}')
 
         # to be sure we add tasks with annotations at the same time
         with transaction.atomic():
@@ -375,8 +374,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
         return db_tasks
 
     def add_predictions(self, task_predictions):
-        """ Save predictions to DB and set the latest model version in the project
-        """
+        """Save predictions to DB and set the latest model version in the project"""
         db_predictions = []
 
         # add predictions
@@ -394,8 +392,8 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
                         prediction_score = float(prediction_score)
                     except ValueError:
                         logger.error(
-                            'Can\'t upload prediction score: should be in float format.'
-                            'Fallback to score=None')
+                            "Can't upload prediction score: should be in float format." 'Fallback to score=None'
+                        )
                         prediction_score = None
 
                 last_model_version = prediction.get('model_version', 'undefined')
@@ -405,7 +403,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
                         project=self.db_tasks[i].project,
                         result=result,
                         score=prediction_score,
-                        model_version=last_model_version
+                        model_version=last_model_version,
                     )
                 )
 
@@ -421,13 +419,11 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
         return self.db_predictions, last_model_version
 
     def add_reviews(self, task_reviews, annotation_mapping, project):
-        """ Save task reviews to DB
-        """
+        """Save task reviews to DB"""
         return []
 
     def add_drafts(self, task_drafts, db_tasks, annotation_mapping, project):
-        """ Save task drafts to DB
-        """
+        """Save task drafts to DB"""
         db_drafts = []
 
         # add drafts
@@ -436,16 +432,18 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
                 if not isinstance(draft, dict):
                     continue
 
-                draft.update({
-                    'task_id': db_tasks[i].id,
-                    'annotation_id': annotation_mapping[draft.get('annotation')],
-                    'project': self.project,
-                    'import_id': draft.get('id'),
-                })
+                draft.update(
+                    {
+                        'task_id': db_tasks[i].id,
+                        'annotation_id': annotation_mapping[draft.get('annotation')],
+                        'project': self.project,
+                        'import_id': draft.get('id'),
+                    }
+                )
                 # remove redundant fields
                 [
-                    draft.pop(field, None) for field in
-                    ['id', 'task', 'annotation', 'project', 'created_username', 'created_ago']
+                    draft.pop(field, None)
+                    for field in ['id', 'task', 'annotation', 'project', 'created_username', 'created_ago']
                 ]
                 db_drafts.append(AnnotationDraft(**draft))
 
@@ -455,8 +453,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
         return self.db_drafts
 
     def add_annotations(self, task_annotations, user):
-        """ Save task annotations to DB
-        """
+        """Save task annotations to DB"""
         db_annotations = []
 
         # add annotations
@@ -501,14 +498,13 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
         return self.db_annotations
 
     def add_tasks(self, task_annotations, task_predictions, validated_tasks):
-        """ Extract tasks from validated_tasks and store them in DB
-        """
+        """Extract tasks from validated_tasks and store them in DB"""
         db_tasks = []
         max_overlap = self.project.maximum_annotations
 
         # identify max inner id
         tasks = Task.objects.filter(project=self.project)
-        prev_inner_id = tasks.order_by("-inner_id")[0].inner_id if tasks else 0
+        prev_inner_id = tasks.order_by('-inner_id')[0].inner_id if tasks else 0
         max_inner_id = (prev_inner_id + 1) if prev_inner_id else 1
 
         all_unique_ids = list(tasks.values_list('unique_id', flat=True))
@@ -529,7 +525,7 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
                 unique_id=str(uuid.uuid4()) if 'unique_id' not in task or task['unique_id'] == '' else task['unique_id'],
                 total_predictions=len(task_predictions[i]),
                 total_annotations=total_annotations,
-                cancelled_annotations=cancelled_annotations
+                cancelled_annotations=cancelled_annotations,
             )
             db_tasks.append(t)
 
@@ -567,15 +563,15 @@ class BaseTaskSerializerBulk(serializers.ListSerializer):
 
     class Meta:
         model = Task
-        fields = "__all__"
+        fields = '__all__'
 
 
 TaskSerializer = load_func(settings.TASK_SERIALIZER)
 
 
 class TaskWithAnnotationsSerializer(TaskSerializer):
-    """
-    """
+    """ """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['annotations'] = AnnotationSerializer(many=True, default=[], context=self.context)
@@ -588,8 +584,8 @@ class TaskWithAnnotationsSerializer(TaskSerializer):
 
 
 class TaskIDWithAnnotationsSerializer(TaskSerializer):
-    """
-    """
+    """ """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # TODO: this called twice due to base class initializer
@@ -601,8 +597,8 @@ class TaskIDWithAnnotationsSerializer(TaskSerializer):
 
 
 class TaskWithPredictionsSerializer(TaskSerializer):
-    """
-    """
+    """ """
+
     predictions = PredictionSerializer(many=True, default=[], read_only=True)
 
     class Meta:
@@ -626,8 +622,7 @@ class TaskWithAnnotationsAndPredictionsSerializer(TaskSerializer):
 
     @staticmethod
     def generate_prediction(task):
-        """ Generate prediction for task and store it to Prediction model
-        """
+        """Generate prediction for task and store it to Prediction model"""
         prediction = task.predictions.filter(model_version=task.project.model_version)
         if not prediction.exists():
             task.project.create_prediction(task)
@@ -649,12 +644,12 @@ class AnnotationDraftSerializer(ModelSerializer):
     def get_created_username(self, draft):
         user = draft.user
         if not user:
-            return ""
+            return ''
 
         name = user.first_name
         last_name = user.last_name
         if len(last_name):
-            name = name + " " + last_name
+            name = name + ' ' + last_name
         name += (' ' if name else '') + f'{user.email}, {user.id}'
         return name
 
@@ -743,7 +738,6 @@ class NextTaskSerializer(TaskWithAnnotationsAndPredictionsAndDraftsSerializer):
 
 
 class TaskIDWithAnnotationsAndPredictionsSerializer(ModelSerializer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['annotations'] = AnnotationSerializer(many=True, default=[], context=self.context)
@@ -755,7 +749,6 @@ class TaskIDWithAnnotationsAndPredictionsSerializer(ModelSerializer):
 
 
 class TaskIDOnlySerializer(ModelSerializer):
-
     class Meta:
         model = Task
         fields = ['id']
