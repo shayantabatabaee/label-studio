@@ -27,6 +27,7 @@ def test_columns_api_returns_expected_ids(business_client):
     assert [c['id'] for c in columns] == [
         'id',
         'inner_id',
+        'unique_id',
         'completed_at',
         'total_annotations',
         'cancelled_annotations',

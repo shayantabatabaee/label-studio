@@ -116,7 +116,8 @@ def get_all_columns(project, *_):
             'visibility_defaults': {
                 'explore': False,
                 'labeling': False
-            }
+            },
+            'project_defined': False,
         }]
 
     result['columns'] += [
